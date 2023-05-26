@@ -14,9 +14,9 @@ import (
 )
 
 var (
-	FileCachePath        = "cache"     // cache directory
-	FileCacheFileSuffix  = ".bin"      // cache file suffix
-	FileCacheEmbedExpiry time.Duration // cache expire time, default is no expire forever.
+	FileCachePath        = os.TempDir() // cache directory
+	FileCacheFileSuffix  = ".bin"       // cache file suffix
+	FileCacheEmbedExpiry time.Duration  // cache expire time, default is no expire forever.
 )
 
 type FileCache struct {
@@ -80,11 +80,11 @@ func (f *FileCache) Set(ctx context.Context, key string, value any, ttl time.Dur
 	if err != nil {
 		return err
 	}
-	cacheFile, err := f.getCacheKey(key)
+	filename, err := f.getCacheKey(key)
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(cacheFile, data, os.ModePerm)
+	return os.WriteFile(filename, data, os.ModePerm)
 }
 
 func (f *FileCache) Has(ctx context.Context, key string) (bool, error) {
@@ -185,11 +185,16 @@ func (f *FileCache) getCacheKey(key string) (string, error) {
 	m := md5.New()
 	_, _ = io.WriteString(m, key)
 	keyHash := fmt.Sprintf("%x", m.Sum(nil))
-	cachePath := filepath.Join(f.Path, keyHash[0:2])
-	if err := pathExistOrMkdir(cachePath); err != nil {
+	paths := []string{f.Path}
+	if f.Path == os.TempDir() {
+		paths = append(paths, "gocache")
+	}
+	paths = append(paths, keyHash[0:2])
+	path := filepath.Join(paths...)
+	if err := pathExistOrMkdir(path); err != nil {
 		return "", err
 	}
-	return filepath.Join(cachePath, fmt.Sprintf("%s%s", keyHash, f.Suffix)), nil
+	return filepath.Join(path, fmt.Sprintf("%s%s", keyHash, f.Suffix)), nil
 }
 
 // Determine if the file exists, and if it does not exist, create it
