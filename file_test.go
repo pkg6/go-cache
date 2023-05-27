@@ -3,11 +3,12 @@ package cache
 import (
 	"context"
 	"fmt"
-	"github.com/stretchr/testify/assert"
 	"os"
 	"path/filepath"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestFileCacheGet(t *testing.T) {
@@ -184,8 +185,4 @@ func TestGobEncodeDecode(t *testing.T) {
 	err = GobDecode(data, dci)
 	assert.Nil(t, err)
 	assert.Equal(t, "hello", dci.Data)
-}
-
-func getTestCacheFilePath() string {
-	return filepath.Join(os.TempDir(), "test", "file.txt")
 }

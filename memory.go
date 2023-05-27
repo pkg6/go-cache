@@ -116,8 +116,6 @@ func (m *MemoryCache) Clear(ctx context.Context) {
 }
 
 func (m *MemoryCache) ClearExpiredKeys() {
-	m.RLock()
-	m.RUnlock()
 	for {
 		<-time.After(m.Interval)
 		m.RLock()
