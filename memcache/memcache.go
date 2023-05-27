@@ -24,7 +24,9 @@ func NewMemCache(memcache *memcache.Client, opts ...CacheOptions) cache.Cache {
 	}
 	return c
 }
-
+func (m *MemcacheCache) Name() string {
+	return cache.MemcacheCacheName
+}
 func (m MemcacheCache) Set(key string, value any, ttl time.Duration) error {
 	item := memcache.Item{Key: key, Expiration: int32(ttl / time.Second)}
 	if v, ok := value.([]byte); ok {

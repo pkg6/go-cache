@@ -16,13 +16,18 @@ type MemoryCache struct {
 
 // NewMemoryCache returns a new MemoryCache.
 func NewMemoryCache(interval time.Duration) Cache {
-	res := &MemoryCache{
+	c := &MemoryCache{
 		Interval: interval,
 		items:    make(map[string]*CacheItem),
 	}
-	go res.ClearExpiredKeys()
-	return res
+	go c.ClearExpiredKeys()
+	return c
 }
+
+func (m *MemoryCache) Name() string {
+	return MemoryCacheName
+}
+
 func (m *MemoryCache) Set(key string, value any, ttl time.Duration) error {
 	m.Lock()
 	defer m.Unlock()

@@ -49,19 +49,23 @@ func FileCacheWithEmbedExpiry(fileCacheEmbedExpiry int) FileCacheOptions {
 // NewFileCache creates a new file cache with no config.
 // The level and expiry need to be set in the method StartAndGC as config string.
 func NewFileCache(opts ...FileCacheOptions) (Cache, error) {
-	fileCache := &FileCache{
+	c := &FileCache{
 		CachePath:  FileCachePath,
 		FileSuffix: FileCacheFileSuffix,
 	}
-	fileCache.EmbedExpiry, _ = strconv.Atoi(
+	c.EmbedExpiry, _ = strconv.Atoi(
 		strconv.FormatInt(int64(FileCacheEmbedExpiry.Seconds()), 10))
 	for _, opt := range opts {
-		opt(fileCache)
+		opt(c)
 	}
-	if err := pathExistOrMkdir(fileCache.CachePath); err != nil {
-		return fileCache, err
+	if err := pathExistOrMkdir(c.CachePath); err != nil {
+		return c, err
 	}
-	return fileCache, nil
+	return c, nil
+}
+
+func (f *FileCache) Name() string {
+	return FileCacheName
 }
 
 // Set value into file cache.

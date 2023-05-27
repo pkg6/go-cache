@@ -13,9 +13,16 @@ var (
 const (
 	MinUint32 uint32 = 0
 	MinUint64 uint64 = 0
+
+	FileCacheName     = "file"
+	MemoryCacheName   = "memory"
+	RedisCacheName    = "redis"
+	MemcacheCacheName = "memcache"
+	CacheName         = "go-cache"
 )
 
 type Cache interface {
+	Name() string
 	Set(key string, value any, ttl time.Duration) error
 	Has(key string) (bool, error)
 	GetMulti(keys []string) ([]any, error)
@@ -24,6 +31,12 @@ type Cache interface {
 	Increment(key string, step int) error
 	Decrement(key string, step int) error
 	Clear() error
+}
+
+type CacheManager interface {
+	Extend(name string, cache Cache) CacheManager
+	Disk(name string) CacheManager
+	Cache
 }
 
 type CacheItem struct {
