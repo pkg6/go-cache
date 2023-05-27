@@ -36,10 +36,10 @@ func GobDecode(data []byte, to *CacheItem) error {
 	return nil
 }
 
-func unwrapF(format string, a ...any) error {
+func UnwrapF(format string, a ...any) error {
 	return errors.Unwrap(errors.New(fmt.Sprintf(format, a...)))
 }
-func wrapF(format string, a ...any) error {
+func WrapF(format string, a ...any) error {
 	return errors.New(fmt.Sprintf(format, a...))
 }
 

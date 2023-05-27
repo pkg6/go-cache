@@ -27,7 +27,10 @@ type Cache interface {
 }
 
 type CacheItem struct {
-	Data       any
+	// data
+	Data any
+	// now data
 	Lastaccess time.Time
-	Expired    time.Time
+	// expired data
+	Expired time.Time
 }
