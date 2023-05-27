@@ -48,7 +48,7 @@ func FileCacheWithEmbedExpiry(fileCacheEmbedExpiry int) FileCacheOptions {
 
 // NewFileCache creates a new file cache with no config.
 // The level and expiry need to be set in the method StartAndGC as config string.
-func NewFileCache(opts ...FileCacheOptions) (Cache, error) {
+func NewFileCache(opts ...FileCacheOptions) Cache {
 	c := &FileCache{
 		CachePath:  FileCachePath,
 		FileSuffix: FileCacheFileSuffix,
@@ -59,9 +59,9 @@ func NewFileCache(opts ...FileCacheOptions) (Cache, error) {
 		opt(c)
 	}
 	if err := pathExistOrMkdir(c.CachePath); err != nil {
-		return c, err
+		panic(err)
 	}
-	return c, nil
+	return c
 }
 
 func (f *FileCache) Name() string {
@@ -160,7 +160,7 @@ func (f *FileCache) Delete(key string) error {
 func (f *FileCache) Increment(key string, step int) error {
 	data, err := f.Get(key)
 	if err != nil {
-		return err
+		return f.Set(key, step, time.Duration(f.EmbedExpiry))
 	}
 	val, err := Increment(data, step)
 	if err != nil {
@@ -173,7 +173,7 @@ func (f *FileCache) Increment(key string, step int) error {
 func (f *FileCache) Decrement(key string, step int) error {
 	data, err := f.Get(key)
 	if err != nil {
-		return err
+		return f.Set(key, step, time.Duration(f.EmbedExpiry))
 	}
 	val, err := Decrement(data, step)
 	if err != nil {
