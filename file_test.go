@@ -1,7 +1,6 @@
 package cache
 
 import (
-	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -29,7 +28,7 @@ func TestFileCacheGet(t *testing.T) {
 					FileCacheWithFileSuffix(".bin"),
 					FileCacheWithEmbedExpiry(0))
 				assert.Nil(t, err)
-				err = bm.Set(context.Background(), "key1", "author", 5*time.Second)
+				err = bm.Set("key1", "author", 5*time.Second)
 				assert.Nil(t, err)
 				return bm
 			}(),
@@ -37,7 +36,7 @@ func TestFileCacheGet(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			val, err := tc.cache.Get(context.Background(), tc.key)
+			val, err := tc.cache.Get(tc.key)
 			assert.Nil(t, err)
 			assert.Equal(t, tc.value, val)
 		})
@@ -75,7 +74,7 @@ func TestFileCacheIsExist(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			err := cache.Set(context.Background(), tc.key, tc.value, tc.timeoutDuration)
+			err := cache.Set(tc.key, tc.value, tc.timeoutDuration)
 			assert.Nil(t, err)
 			time.Sleep(2 * time.Second)
 		})
@@ -104,9 +103,9 @@ func TestFileCacheDelete(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			err := cache.Set(context.Background(), tc.key, tc.value, tc.timeoutDuration)
+			err := cache.Set(tc.key, tc.value, tc.timeoutDuration)
 			assert.Nil(t, err)
-			err = cache.Delete(context.Background(), tc.key)
+			err = cache.Delete(tc.key)
 			assert.Nil(t, err)
 		})
 	}
@@ -142,11 +141,11 @@ func TestFileCacheGetMulti(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			for idx, key := range tc.keys {
 				value := tc.values[idx]
-				err := cache.Set(context.Background(), key, value, tc.timeoutDuration)
+				err := cache.Set(key, value, tc.timeoutDuration)
 				assert.Nil(t, err)
 			}
 			time.Sleep(2 * time.Second)
-			vals, err := cache.GetMulti(context.Background(), tc.keys)
+			vals, err := cache.GetMulti(tc.keys)
 			if err != nil {
 				assert.ErrorContains(t, err, ErrKeyExpired.Error())
 				return

@@ -1,7 +1,6 @@
 package cache
 
 import (
-	"context"
 	"crypto/md5"
 	"errors"
 	"fmt"
@@ -68,7 +67,7 @@ func NewFileCache(opts ...FileCacheOptions) (Cache, error) {
 // Set value into file cache.
 // timeout: how long this file should be kept in ms
 // if timeout equals fc.EmbedExpiry(default is 0), cache this item forever.
-func (f *FileCache) Set(ctx context.Context, key string, value any, ttl time.Duration) error {
+func (f *FileCache) Set(key string, value any, ttl time.Duration) error {
 	item := CacheItem{Data: value}
 	if ttl == time.Duration(f.EmbedExpiry) {
 		item.Expired = time.Now().Add((86400 * 365 * 10) * time.Second) // ten years
@@ -87,8 +86,8 @@ func (f *FileCache) Set(ctx context.Context, key string, value any, ttl time.Dur
 	return os.WriteFile(filename, data, os.ModePerm)
 }
 
-func (f *FileCache) Has(ctx context.Context, key string) (bool, error) {
-	_, err := f.Get(ctx, key)
+func (f *FileCache) Has(key string) (bool, error) {
+	_, err := f.Get(key)
 	if err == nil {
 		return true, err
 	}
@@ -97,11 +96,11 @@ func (f *FileCache) Has(ctx context.Context, key string) (bool, error) {
 
 // GetMulti gets values from file cache.
 // if nonexistent or expired return an empty string.
-func (f *FileCache) GetMulti(ctx context.Context, keys []string) ([]any, error) {
+func (f *FileCache) GetMulti(keys []string) ([]any, error) {
 	rc := make([]any, len(keys))
 	keysErr := make([]string, 0)
 	for i, ki := range keys {
-		val, err := f.Get(ctx, ki)
+		val, err := f.Get(ki)
 		if err != nil {
 			keysErr = append(keysErr, fmt.Sprintf("key [%s] error: %s", ki, err.Error()))
 			continue
@@ -116,7 +115,7 @@ func (f *FileCache) GetMulti(ctx context.Context, keys []string) ([]any, error) 
 
 // Get value from file cache.
 // if nonexistent or expired return an empty string.
-func (f *FileCache) Get(ctx context.Context, key string) (any, error) {
+func (f *FileCache) Get(key string) (any, error) {
 	filename, err := f.getCacheKey(key)
 	if err != nil {
 		return nil, err
@@ -131,14 +130,14 @@ func (f *FileCache) Get(ctx context.Context, key string) (any, error) {
 		return nil, err
 	}
 	if to.Expired.Before(time.Now()) {
-		_ = f.Delete(ctx, key)
+		_ = f.Delete(key)
 		return nil, ErrKeyExpired
 	}
 	return to.Data, nil
 }
 
 // Delete file cache value.
-func (f *FileCache) Delete(ctx context.Context, key string) error {
+func (f *FileCache) Delete(key string) error {
 	filename, err := f.getCacheKey(key)
 	if err != nil {
 		return err
@@ -154,8 +153,8 @@ func (f *FileCache) Delete(ctx context.Context, key string) error {
 
 // Increment increases cached int value.
 // fc value is saved forever unless deleted.
-func (f *FileCache) Increment(ctx context.Context, key string, step int) error {
-	data, err := f.Get(ctx, key)
+func (f *FileCache) Increment(key string, step int) error {
+	data, err := f.Get(key)
 	if err != nil {
 		return err
 	}
@@ -163,12 +162,12 @@ func (f *FileCache) Increment(ctx context.Context, key string, step int) error {
 	if err != nil {
 		return err
 	}
-	return f.Set(ctx, key, val, time.Duration(f.EmbedExpiry))
+	return f.Set(key, val, time.Duration(f.EmbedExpiry))
 }
 
 // Decrement decreases cached int value.
-func (f *FileCache) Decrement(ctx context.Context, key string, step int) error {
-	data, err := f.Get(ctx, key)
+func (f *FileCache) Decrement(key string, step int) error {
+	data, err := f.Get(key)
 	if err != nil {
 		return err
 	}
@@ -176,12 +175,12 @@ func (f *FileCache) Decrement(ctx context.Context, key string, step int) error {
 	if err != nil {
 		return err
 	}
-	return f.Set(ctx, key, val, time.Duration(f.EmbedExpiry))
+	return f.Set(key, val, time.Duration(f.EmbedExpiry))
 }
 
 // Clear cleans cached files (not implemented)
-func (f *FileCache) Clear(ctx context.Context) {
-	_ = os.RemoveAll(f.CachePath)
+func (f *FileCache) Clear() error {
+	return os.RemoveAll(f.CachePath)
 }
 
 func (f *FileCache) getCacheKey(key string) (string, error) {

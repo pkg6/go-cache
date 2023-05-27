@@ -1,7 +1,6 @@
 package cache
 
 import (
-	"context"
 	"errors"
 	"time"
 )
@@ -17,14 +16,14 @@ const (
 )
 
 type Cache interface {
-	Set(ctx context.Context, key string, value any, ttl time.Duration) error
-	Has(ctx context.Context, key string) (bool, error)
-	GetMulti(ctx context.Context, keys []string) ([]any, error)
-	Get(ctx context.Context, key string) (any, error)
-	Delete(ctx context.Context, key string) error
-	Increment(ctx context.Context, key string, step int) error
-	Decrement(ctx context.Context, key string, step int) error
-	Clear(ctx context.Context)
+	Set(key string, value any, ttl time.Duration) error
+	Has(key string) (bool, error)
+	GetMulti(keys []string) ([]any, error)
+	Get(key string) (any, error)
+	Delete(key string) error
+	Increment(key string, step int) error
+	Decrement(key string, step int) error
+	Clear() error
 }
 
 type CacheItem struct {

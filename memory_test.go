@@ -1,7 +1,6 @@
 package cache
 
 import (
-	"context"
 	"sync"
 	"testing"
 	"time"
@@ -31,7 +30,7 @@ func TestMemoryCacheGet(t *testing.T) {
 			key:  "key1",
 			cache: func() Cache {
 				bm := NewMemoryCache(20 * time.Second)
-				err := bm.Set(context.Background(), "key1", "value1", 1*time.Second)
+				err := bm.Set("key1", "value1", 1*time.Second)
 				time.Sleep(2 * time.Second)
 				assert.Nil(t, err)
 				return bm
@@ -44,7 +43,7 @@ func TestMemoryCacheGet(t *testing.T) {
 			value: "author",
 			cache: func() Cache {
 				bm := NewMemoryCache(1 * time.Second)
-				err := bm.Set(context.Background(), "key2", "author", 5*time.Second)
+				err := bm.Set("key2", "author", 5*time.Second)
 				assert.Nil(t, err)
 				return bm
 			}(),
@@ -52,7 +51,7 @@ func TestMemoryCacheGet(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			val, err := tc.cache.Get(context.Background(), tc.key)
+			val, err := tc.cache.Get(tc.key)
 			assert.Equal(t, tc.wantErr, err)
 			if err != nil {
 				return
@@ -64,18 +63,18 @@ func TestMemoryCacheGet(t *testing.T) {
 
 func TestMemoryCacheConcurrencyIncr(t *testing.T) {
 	bm := NewMemoryCache(20)
-	err := bm.Set(context.Background(), "cacheIncr", 0, time.Second*20)
+	err := bm.Set("cacheIncr", 0, time.Second*20)
 	assert.Nil(t, err)
 	wg := sync.WaitGroup{}
 	wg.Add(10)
 	for i := 0; i < 10; i++ {
 		go func() {
 			defer wg.Done()
-			_ = bm.Increment(context.Background(), "cacheIncr", 1)
+			_ = bm.Increment("cacheIncr", 1)
 		}()
 	}
 	wg.Wait()
-	val, _ := bm.Get(context.Background(), "cacheIncr")
+	val, _ := bm.Get("cacheIncr")
 	if val.(int) != 10 {
 		t.Error("Incr err")
 	}

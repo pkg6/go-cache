@@ -1,7 +1,6 @@
 package cache
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"strings"
@@ -24,7 +23,7 @@ func NewMemoryCache(interval time.Duration) Cache {
 	go res.ClearExpiredKeys()
 	return res
 }
-func (m *MemoryCache) Set(ctx context.Context, key string, value any, ttl time.Duration) error {
+func (m *MemoryCache) Set(key string, value any, ttl time.Duration) error {
 	m.Lock()
 	defer m.Unlock()
 	m.items[key] = &CacheItem{
@@ -35,18 +34,18 @@ func (m *MemoryCache) Set(ctx context.Context, key string, value any, ttl time.D
 	return nil
 }
 
-func (m *MemoryCache) Has(ctx context.Context, key string) (bool, error) {
-	if _, err := m.Get(ctx, key); err == nil {
+func (m *MemoryCache) Has(key string) (bool, error) {
+	if _, err := m.Get(key); err == nil {
 		return false, err
 	}
 	return true, nil
 }
 
-func (m *MemoryCache) GetMulti(ctx context.Context, keys []string) ([]any, error) {
+func (m *MemoryCache) GetMulti(keys []string) ([]any, error) {
 	rc := make([]interface{}, len(keys))
 	keysErr := make([]string, 0)
 	for i, ki := range keys {
-		val, err := m.Get(context.Background(), ki)
+		val, err := m.Get(ki)
 		if err != nil {
 			keysErr = append(keysErr, fmt.Sprintf("key [%s] error: %s", ki, err.Error()))
 			continue
@@ -59,7 +58,7 @@ func (m *MemoryCache) GetMulti(ctx context.Context, keys []string) ([]any, error
 	return rc, errors.New(strings.Join(keysErr, "; "))
 }
 
-func (m *MemoryCache) Get(ctx context.Context, key string) (any, error) {
+func (m *MemoryCache) Get(key string) (any, error) {
 	m.RLock()
 	defer m.RUnlock()
 	if item, ok := m.items[key]; ok {
@@ -72,14 +71,14 @@ func (m *MemoryCache) Get(ctx context.Context, key string) (any, error) {
 	return nil, ErrKeyNotExist
 }
 
-func (m *MemoryCache) Delete(ctx context.Context, key string) error {
+func (m *MemoryCache) Delete(key string) error {
 	m.Lock()
 	defer m.Unlock()
 	delete(m.items, key)
 	return nil
 }
 
-func (m *MemoryCache) Increment(ctx context.Context, key string, step int) error {
+func (m *MemoryCache) Increment(key string, step int) error {
 	m.Lock()
 	defer m.Unlock()
 	itm, ok := m.items[key]
@@ -94,7 +93,7 @@ func (m *MemoryCache) Increment(ctx context.Context, key string, step int) error
 	return nil
 }
 
-func (m *MemoryCache) Decrement(ctx context.Context, key string, step int) error {
+func (m *MemoryCache) Decrement(key string, step int) error {
 	m.Lock()
 	defer m.Unlock()
 	itm, ok := m.items[key]
@@ -109,10 +108,11 @@ func (m *MemoryCache) Decrement(ctx context.Context, key string, step int) error
 	return nil
 }
 
-func (m *MemoryCache) Clear(ctx context.Context) {
+func (m *MemoryCache) Clear() error {
 	m.Lock()
 	defer m.Unlock()
 	m.items = make(map[string]*CacheItem)
+	return nil
 }
 
 func (m *MemoryCache) ClearExpiredKeys() {
