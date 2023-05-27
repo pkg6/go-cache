@@ -37,10 +37,10 @@ func GobDecode(data []byte, to *CacheItem) error {
 }
 
 func UnwrapF(format string, a ...any) error {
-	return errors.Unwrap(errors.New(fmt.Sprintf(format, a...)))
+	return errors.Unwrap(fmt.Errorf(format, a...))
 }
 func WrapF(format string, a ...any) error {
-	return errors.New(fmt.Sprintf(format, a...))
+	return fmt.Errorf(format, a...)
 }
 
 // Decrement Self decrement

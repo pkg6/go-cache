@@ -140,6 +140,9 @@ func (f *FileCache) Get(ctx context.Context, key string) (any, error) {
 // Delete file cache value.
 func (f *FileCache) Delete(ctx context.Context, key string) error {
 	filename, err := f.getCacheKey(key)
+	if err != nil {
+		return err
+	}
 	if ok, _ := fileExist(filename); ok {
 		err = os.Remove(filename)
 		if err != nil {
