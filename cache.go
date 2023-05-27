@@ -7,7 +7,8 @@ import (
 )
 
 var (
-	ErrKeyExpired = errors.New("the key is expired")
+	ErrKeyExpired  = errors.New("the key is expired")
+	ErrKeyNotExist = errors.New("the key isn't exist")
 )
 
 const (
