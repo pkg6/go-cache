@@ -35,6 +35,9 @@ func NewRedisCache(pool *redis.Pool, opts ...CacheOptions) cache.Cache {
 	}
 	return c
 }
+func (c *RedisCache) Name() string {
+	return cache.RedisCacheName
+}
 
 // Set puts cache into redis.
 func (c *RedisCache) Set(key string, value any, ttl time.Duration) error {
