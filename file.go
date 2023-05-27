@@ -20,8 +20,8 @@ var (
 )
 
 type FileCache struct {
-	Path        string
-	Suffix      string
+	CachePath   string
+	FileSuffix  string
 	EmbedExpiry int
 }
 type FileCacheOptions func(c *FileCache)
@@ -29,14 +29,14 @@ type FileCacheOptions func(c *FileCache)
 // FileCacheWithCachePath configures cachePath for FileCache
 func FileCacheWithCachePath(cachePath string) FileCacheOptions {
 	return func(c *FileCache) {
-		c.Path = cachePath
+		c.CachePath = cachePath
 	}
 }
 
 // FileCacheWithFileSuffix configures fileSuffix for FileCache
 func FileCacheWithFileSuffix(fileSuffix string) FileCacheOptions {
 	return func(c *FileCache) {
-		c.Suffix = fileSuffix
+		c.FileSuffix = fileSuffix
 	}
 }
 
@@ -51,15 +51,15 @@ func FileCacheWithEmbedExpiry(fileCacheEmbedExpiry int) FileCacheOptions {
 // The level and expiry need to be set in the method StartAndGC as config string.
 func NewFileCache(opts ...FileCacheOptions) (Cache, error) {
 	fileCache := &FileCache{
-		Path:   FileCachePath,
-		Suffix: FileCacheFileSuffix,
+		CachePath:  FileCachePath,
+		FileSuffix: FileCacheFileSuffix,
 	}
 	fileCache.EmbedExpiry, _ = strconv.Atoi(
 		strconv.FormatInt(int64(FileCacheEmbedExpiry.Seconds()), 10))
 	for _, opt := range opts {
 		opt(fileCache)
 	}
-	if err := pathExistOrMkdir(fileCache.Path); err != nil {
+	if err := pathExistOrMkdir(fileCache.CachePath); err != nil {
 		return fileCache, err
 	}
 	return fileCache, nil
@@ -143,7 +143,7 @@ func (f *FileCache) Delete(ctx context.Context, key string) error {
 	if ok, _ := fileExist(filename); ok {
 		err = os.Remove(filename)
 		if err != nil {
-			return unwrapF("can not delete this file cache key-value, key is %s and file name is %s", key, filename)
+			return UnwrapF("can not delete this file cache key-value, key is %s and file name is %s", key, filename)
 		}
 	}
 	return nil
@@ -178,15 +178,15 @@ func (f *FileCache) Decrement(ctx context.Context, key string, step int) error {
 
 // Clear cleans cached files (not implemented)
 func (f *FileCache) Clear(ctx context.Context) {
-	_ = os.RemoveAll(f.Path)
+	_ = os.RemoveAll(f.CachePath)
 }
 
 func (f *FileCache) getCacheKey(key string) (string, error) {
 	m := md5.New()
 	_, _ = io.WriteString(m, key)
 	keyHash := fmt.Sprintf("%x", m.Sum(nil))
-	paths := []string{f.Path}
-	if f.Path == os.TempDir() {
+	paths := []string{f.CachePath}
+	if f.CachePath == os.TempDir() {
 		paths = append(paths, "gocache")
 	}
 	paths = append(paths, keyHash[0:2])
@@ -194,7 +194,7 @@ func (f *FileCache) getCacheKey(key string) (string, error) {
 	if err := pathExistOrMkdir(path); err != nil {
 		return "", err
 	}
-	return filepath.Join(path, fmt.Sprintf("%s%s", keyHash, f.Suffix)), nil
+	return filepath.Join(path, fmt.Sprintf("%s%s", keyHash, f.FileSuffix)), nil
 }
 
 // Determine if the file exists, and if it does not exist, create it
@@ -206,7 +206,7 @@ func pathExistOrMkdir(path string) error {
 	if !ok {
 		err = os.MkdirAll(path, os.ModePerm)
 		if err != nil {
-			return unwrapF("could not create the directory: %s", path)
+			return UnwrapF("could not create the directory: %s", path)
 		}
 	}
 	return err
@@ -221,5 +221,5 @@ func fileExist(path string) (bool, error) {
 	if os.IsNotExist(err) {
 		return false, nil
 	}
-	return false, wrapF("file cache path is invalid: %s", path)
+	return false, WrapF("file cache path is invalid: %s", path)
 }
