@@ -1,0 +1,15 @@
+version: "3"
+
+services:
+  redis:
+    container_name: "go-cache-redis"
+    image: redis
+    environment:
+      - ALLOW_EMPTY_PASSWORD=yes
+    ports:
+      - '6379:6379'
+  memcache:
+    container_name: "go-cache-memcache"
+    image: memcached
+    ports:
+      - "11211:11211"
