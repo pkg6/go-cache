@@ -23,12 +23,8 @@ func TestFileCacheGet(t *testing.T) {
 			key:   "key1",
 			value: "author",
 			cache: func() Cache {
-				bm, err := NewFileCache(
-					FileCacheWithCachePath("cache"),
-					FileCacheWithFileSuffix(".bin"),
-					FileCacheWithEmbedExpiry(0))
-				assert.Nil(t, err)
-				err = bm.Set("key1", "author", 5*time.Second)
+				bm := NewFileCache(FileCacheWithCachePath("cache"))
+				err := bm.Set("key1", "author", 5*time.Second)
 				assert.Nil(t, err)
 				return bm
 			}(),
@@ -45,11 +41,7 @@ func TestFileCacheGet(t *testing.T) {
 }
 
 func TestFileCacheIsExist(t *testing.T) {
-	cache, err := NewFileCache(
-		FileCacheWithCachePath("cache"),
-		FileCacheWithFileSuffix(".bin"),
-		FileCacheWithEmbedExpiry(0))
-	assert.Nil(t, err)
+	cache := NewFileCache(FileCacheWithCachePath("cache"))
 	testCases := []struct {
 		name            string
 		key             string
@@ -83,11 +75,7 @@ func TestFileCacheIsExist(t *testing.T) {
 }
 
 func TestFileCacheDelete(t *testing.T) {
-	cache, err := NewFileCache(
-		FileCacheWithCachePath("cache"),
-		FileCacheWithFileSuffix(".bin"),
-		FileCacheWithEmbedExpiry(0))
-	assert.Nil(t, err)
+	cache := NewFileCache(FileCacheWithCachePath("cache"))
 	testCases := []struct {
 		name            string
 		key             string
@@ -113,11 +101,7 @@ func TestFileCacheDelete(t *testing.T) {
 }
 
 func TestFileCacheGetMulti(t *testing.T) {
-	cache, err := NewFileCache(
-		FileCacheWithCachePath("cache"),
-		FileCacheWithFileSuffix(".bin"),
-		FileCacheWithEmbedExpiry(0))
-	assert.Nil(t, err)
+	cache := NewFileCache(FileCacheWithCachePath("cache"))
 	testCases := []struct {
 		name            string
 		keys            []string

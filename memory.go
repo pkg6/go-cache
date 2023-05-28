@@ -31,11 +31,13 @@ func (m *MemoryCache) Name() string {
 func (m *MemoryCache) Set(key string, value any, ttl time.Duration) error {
 	m.Lock()
 	defer m.Unlock()
-	m.items[key] = &CacheItem{
-		Data:       value,
-		Lastaccess: time.Now(),
-		Expired:    time.Now().Add(ttl),
+	item := &CacheItem{Data: value, JoinTime: time.Now()}
+	item.TTL = ttl
+	if item.TTL == time.Duration(0) {
+		item.TTL = (86400 * 365 * 20) * time.Second
 	}
+	item.ExpirationTime = item.JoinTime.Add(item.TTL)
+	m.items[key] = item
 	return nil
 }
 
@@ -67,8 +69,7 @@ func (m *MemoryCache) Get(key string) (any, error) {
 	m.RLock()
 	defer m.RUnlock()
 	if item, ok := m.items[key]; ok {
-		if item.Expired.Before(time.Now()) {
-			delete(m.items, key)
+		if item.ExpirationTime.Before(time.Now()) {
 			return nil, ErrKeyExpired
 		}
 		return item.Data, nil
@@ -88,7 +89,7 @@ func (m *MemoryCache) Increment(key string, step int) error {
 	defer m.Unlock()
 	itm, ok := m.items[key]
 	if !ok {
-		return ErrKeyNotExist
+		return m.Set(key, step, 0)
 	}
 	val, err := Increment(itm.Data, step)
 	if err != nil {
@@ -103,7 +104,7 @@ func (m *MemoryCache) Decrement(key string, step int) error {
 	defer m.Unlock()
 	itm, ok := m.items[key]
 	if !ok {
-		return ErrKeyNotExist
+		return m.Set(key, step, 0)
 	}
 	val, err := Decrement(itm.Data, step)
 	if err != nil {
@@ -130,7 +131,7 @@ func (m *MemoryCache) ClearExpiredKeys() {
 		}
 		m.RUnlock()
 		for key, item := range m.items {
-			if item.Expired.Before(time.Now()) {
+			if item.ExpirationTime.Before(time.Now()) {
 				delete(m.items, key)
 			}
 		}

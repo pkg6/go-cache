@@ -3,31 +3,38 @@ package memcache
 import (
 	"errors"
 	"fmt"
-	"github.com/bradfitz/gomemcache/memcache"
-	"github.com/pkg6/go-cache"
 	"strings"
 	"time"
+
+	"github.com/bradfitz/gomemcache/memcache"
+	"github.com/pkg6/go-cache"
 )
 
-type MemcacheCache struct {
+type Cache struct {
 	Memcache *memcache.Client
 }
-type CacheOptions func(c *MemcacheCache)
+type CacheOptions func(c *Cache)
+
+func CacheWithMemcacheClient(memcache *memcache.Client) CacheOptions {
+	return func(c *Cache) {
+		c.Memcache = memcache
+	}
+}
 
 // NewMemCache creates new memcache adapter.
-func NewMemCache(memcache *memcache.Client, opts ...CacheOptions) cache.Cache {
-	c := &MemcacheCache{
-		Memcache: memcache,
+func NewMemCache(opts ...CacheOptions) cache.Cache {
+	c := &Cache{
+		Memcache: memcache.New("127.0.0.1:11211"),
 	}
 	for _, opt := range opts {
 		opt(c)
 	}
 	return c
 }
-func (m *MemcacheCache) Name() string {
+func (m *Cache) Name() string {
 	return cache.MemcacheCacheName
 }
-func (m MemcacheCache) Set(key string, value any, ttl time.Duration) error {
+func (m *Cache) Set(key string, value any, ttl time.Duration) error {
 	item := memcache.Item{Key: key, Expiration: int32(ttl / time.Second)}
 	if v, ok := value.([]byte); ok {
 		item.Value = v
@@ -39,12 +46,12 @@ func (m MemcacheCache) Set(key string, value any, ttl time.Duration) error {
 	return m.Memcache.Set(&item)
 }
 
-func (m MemcacheCache) Has(key string) (bool, error) {
+func (m *Cache) Has(key string) (bool, error) {
 	_, err := m.Get(key)
 	return err == nil, err
 }
 
-func (m MemcacheCache) GetMulti(keys []string) ([]any, error) {
+func (m *Cache) GetMulti(keys []string) ([]any, error) {
 	rv := make([]interface{}, len(keys))
 	mv, err := m.Memcache.GetMulti(keys)
 	if err != nil {
@@ -64,7 +71,7 @@ func (m MemcacheCache) GetMulti(keys []string) ([]any, error) {
 	return rv, errors.New(strings.Join(keysErr, "; "))
 }
 
-func (m MemcacheCache) Get(key string) (any, error) {
+func (m *Cache) Get(key string) (any, error) {
 	if item, err := m.Memcache.Get(key); err == nil {
 		return item.Value, nil
 	} else {
@@ -72,20 +79,20 @@ func (m MemcacheCache) Get(key string) (any, error) {
 	}
 }
 
-func (m MemcacheCache) Delete(key string) error {
+func (m *Cache) Delete(key string) error {
 	return m.Memcache.Delete(key)
 }
 
-func (m MemcacheCache) Increment(key string, step int) error {
+func (m *Cache) Increment(key string, step int) error {
 	_, err := m.Memcache.Increment(key, uint64(step))
 	return err
 }
 
-func (m MemcacheCache) Decrement(key string, step int) error {
+func (m *Cache) Decrement(key string, step int) error {
 	_, err := m.Memcache.Decrement(key, uint64(step))
 	return err
 }
 
-func (m MemcacheCache) Clear() error {
+func (m *Cache) Clear() error {
 	return m.Memcache.FlushAll()
 }

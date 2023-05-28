@@ -1,15 +1,17 @@
 package memcache
 
 import (
-	"github.com/bradfitz/gomemcache/memcache"
-	"github.com/pkg6/go-cache"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/suite"
 	"log"
 	"os"
 	"strconv"
 	"testing"
 	"time"
+
+	"github.com/pkg6/go-cache"
+
+	"github.com/bradfitz/gomemcache/memcache"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/suite"
 )
 
 type Suite struct {
@@ -20,11 +22,9 @@ type Suite struct {
 }
 
 func (s *Suite) SetupSuite() {
-
 	t := s.T()
 	maxTryCnt := 10
 	pool := memcache.New(s.dsn)
-
 	// test connection
 	err := pool.Ping()
 	for err != nil && maxTryCnt > 0 {
@@ -36,7 +36,7 @@ func (s *Suite) SetupSuite() {
 		t.Fatal(err)
 	}
 
-	bm := NewMemCache(pool)
+	bm := NewMemCache(CacheWithMemcacheClient(pool))
 
 	s.cache = bm
 
