@@ -55,7 +55,7 @@ func (m *Cache) GetMulti(keys []string) ([]any, error) {
 	rv := make([]interface{}, len(keys))
 	mv, err := m.Memcache.GetMulti(keys)
 	if err != nil {
-		return rv, cache.WrapF("could not read multiple key-values from memcache, please check your keys, network and connection. Root cause: %s", err.Error())
+		return rv, fmt.Errorf("could not read multiple key-values from memcache, please check your keys, network and connection. Root cause: %s", err)
 	}
 	keysErr := make([]string, 0)
 	for i, ki := range keys {
@@ -75,7 +75,7 @@ func (m *Cache) Get(key string) (any, error) {
 	if item, err := m.Memcache.Get(key); err == nil {
 		return item.Value, nil
 	} else {
-		return nil, cache.WrapF("could not read data from memcache, please check your key, network and connection. Root cause: %s", err.Error())
+		return nil, fmt.Errorf("could not read data from memcache, please check your key, network and connection. Root cause: %s", err.Error())
 	}
 }
 
