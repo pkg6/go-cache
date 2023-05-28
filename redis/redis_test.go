@@ -81,16 +81,6 @@ func (s *RedisCompositionTestSuite) TestRedisCacheGet() {
 		timeoutDuration time.Duration
 		wantErr         error
 	}{
-		//{
-		//	name: "get return err",
-		//	key:  "key0",
-		//	wantErr: func() error {
-		//		err := errors.New("the key not exist")
-		//		return berror.Wrapf(err, cache.RedisCacheCurdFailed,
-		//			"could not execute this command: %s", "GET")
-		//	}(),
-		//	timeoutDuration: 1 * time.Second,
-		//},
 		{
 			name:            "get val",
 			key:             "key1",
@@ -105,8 +95,7 @@ func (s *RedisCompositionTestSuite) TestRedisCacheGet() {
 			time.Sleep(2 * time.Second)
 			val, err := s.cache.Get(tc.key)
 			assert.Nil(t, err)
-			vs, _ := redis.String(val, err)
-			assert.Equal(t, tc.value, vs)
+			assert.Equal(t, tc.value, val)
 		})
 	}
 }
