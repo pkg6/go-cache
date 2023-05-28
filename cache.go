@@ -1,6 +1,8 @@
 package cache
 
 import (
+	"bytes"
+	"encoding/gob"
 	"errors"
 	"time"
 )
@@ -38,12 +40,34 @@ type CacheManager interface {
 	Disk(name string) CacheManager
 	Cache
 }
+type CacheItemCrypto interface {
+	Encode(v any) ([]byte, error)
+	Decode(data []byte, v *CacheItem) error
+}
 
 type CacheItem struct {
 	// data
 	Data any
+	//expired ttl
+	TTL time.Duration
 	// now data
-	Lastaccess time.Time
+	JoinTime time.Time
 	// expired data
-	Expired time.Time
+	ExpirationTime time.Time
+}
+
+func (c CacheItem) Encode(v any) ([]byte, error) {
+	buf := bytes.NewBuffer(nil)
+	enc := gob.NewEncoder(buf)
+	err := enc.Encode(v)
+	if err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
+}
+
+func (c CacheItem) Decode(data []byte, v *CacheItem) error {
+	buf := bytes.NewBuffer(data)
+	dec := gob.NewDecoder(buf)
+	return dec.Decode(&v)
 }

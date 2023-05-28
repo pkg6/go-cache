@@ -2,14 +2,16 @@ package redis
 
 import (
 	"fmt"
-	"github.com/gomodule/redigo/redis"
-	"github.com/pkg6/go-cache"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/suite"
 	"log"
 	"os"
 	"testing"
 	"time"
+
+	"github.com/pkg6/go-cache"
+
+	"github.com/gomodule/redigo/redis"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/suite"
 )
 
 type Suite struct {
@@ -26,7 +28,7 @@ func (s *Suite) SetupSuite() {
 	dialFunc := func() (c redis.Conn, err error) {
 		c, err = redis.Dial("tcp", s.dsn)
 		if err != nil {
-			return nil, cache.WrapF("could not dial to remote %s server: %s ", s.driver, s.dsn)
+			return nil, fmt.Errorf("could not dial to remote %s server: %s ", s.driver, s.dsn)
 		}
 		_, selecterr := c.Do("SELECT", 0)
 		if selecterr != nil {
@@ -60,7 +62,7 @@ func (s *Suite) SetupSuite() {
 		t.Fatal(err)
 	}
 
-	bm := NewRedisCache(pool)
+	bm := NewRedisCache(CacheWithRedisPool(pool))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -71,11 +73,6 @@ type RedisCompositionTestSuite struct {
 	Suite
 }
 
-func (s *RedisCompositionTestSuite) TearDownTest() {
-	// test clear all
-	assert.Nil(s.T(), s.cache.Clear())
-}
-
 func (s *RedisCompositionTestSuite) TestRedisCacheGet() {
 	testCases := []struct {
 		name            string
@@ -84,6 +81,16 @@ func (s *RedisCompositionTestSuite) TestRedisCacheGet() {
 		timeoutDuration time.Duration
 		wantErr         error
 	}{
+		//{
+		//	name: "get return err",
+		//	key:  "key0",
+		//	wantErr: func() error {
+		//		err := errors.New("the key not exist")
+		//		return berror.Wrapf(err, cache.RedisCacheCurdFailed,
+		//			"could not execute this command: %s", "GET")
+		//	}(),
+		//	timeoutDuration: 1 * time.Second,
+		//},
 		{
 			name:            "get val",
 			key:             "key1",
@@ -96,12 +103,7 @@ func (s *RedisCompositionTestSuite) TestRedisCacheGet() {
 			err := s.cache.Set(tc.key, tc.value, tc.timeoutDuration)
 			assert.Nil(t, err)
 			time.Sleep(2 * time.Second)
-
 			val, err := s.cache.Get(tc.key)
-			//if err != nil {
-			//	assert.EqualError(t, ts.wantErr, err.Error())
-			//	return
-			//}
 			assert.Nil(t, err)
 			vs, _ := redis.String(val, err)
 			assert.Equal(t, tc.value, vs)
@@ -109,7 +111,7 @@ func (s *RedisCompositionTestSuite) TestRedisCacheGet() {
 	}
 }
 
-func (s *RedisCompositionTestSuite) TestRedisCacheIsExist() {
+func (s *RedisCompositionTestSuite) TestRedisCacheHas() {
 	testCases := []struct {
 		name            string
 		key             string
@@ -258,7 +260,7 @@ func (s *RedisCompositionTestSuite) TestCacheScan() {
 	}
 	time.Sleep(time.Second)
 	// scan all for the first time
-	keys, err := s.cache.(*RedisCache).Scan(DefaultKey + ":*")
+	keys, err := s.cache.(*Cache).Scan(DefaultKey + ":*")
 	assert.Nil(t, err)
 
 	assert.Equal(t, 100, len(keys), "scan all error")
@@ -267,7 +269,7 @@ func (s *RedisCompositionTestSuite) TestCacheScan() {
 	assert.Nil(t, s.cache.Clear())
 
 	// scan all for the second time
-	keys, err = s.cache.(*RedisCache).Scan(DefaultKey + ":*")
+	keys, err = s.cache.(*Cache).Scan(DefaultKey + ":*")
 	assert.Nil(t, err)
 	assert.Equal(t, 0, len(keys))
 }

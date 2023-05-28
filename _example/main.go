@@ -7,7 +7,7 @@ import (
 func main() {
 	c := cache.New()
 	c.Extend(cache.FileCacheName, cache.NewFileCache())
-	c.Set("cache", "test", 1)
+	c.Set("cache", "test", 0)
 	c.Get("cache")
 	c.GetMulti([]string{"cache"})
 	c.Delete("cache")

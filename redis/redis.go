@@ -3,31 +3,56 @@ package redis
 import (
 	"errors"
 	"fmt"
+	"time"
+
 	"github.com/gomodule/redigo/redis"
 	"github.com/pkg6/go-cache"
-	"time"
 )
 
 // DefaultKey defines the collection name of redis for the cache adapter.
 var DefaultKey = "gocache"
 
-type RedisCache struct {
+type Cache struct {
 	Redis *redis.Pool // redis connection pool
 	Key   string
 }
-type CacheOptions func(c *RedisCache)
+type CacheOptions func(c *Cache)
 
 // CacheWithKey configures key for redis
 func CacheWithKey(key string) CacheOptions {
-	return func(c *RedisCache) {
+	return func(c *Cache) {
 		c.Key = key
 	}
 }
 
+// CacheWithRedisPool configures prefix for redis
+func CacheWithRedisPool(pool *redis.Pool) CacheOptions {
+	return func(c *Cache) {
+		c.Redis = pool
+	}
+}
+func defaultRedisPool() *redis.Pool {
+	return &redis.Pool{
+		Dial: func() (c redis.Conn, err error) {
+			c, err = redis.Dial("tcp", "127.0.0.1:6379")
+			if err != nil {
+				return nil, fmt.Errorf("could not dial to remote redis server: %s ", "127.0.0.1:6379")
+			}
+			if _, doErr := c.Do("SELECT", 0); doErr != nil {
+				_ = c.Close()
+				return nil, doErr
+			}
+			return
+		},
+		MaxIdle:     3,
+		IdleTimeout: 3 * time.Second,
+	}
+}
+
 // NewRedisCache creates a new redis cache with default collection name.
-func NewRedisCache(pool *redis.Pool, opts ...CacheOptions) cache.Cache {
-	c := &RedisCache{
-		Redis: pool,
+func NewRedisCache(opts ...CacheOptions) cache.Cache {
+	c := &Cache{
+		Redis: defaultRedisPool(),
 		Key:   DefaultKey,
 	}
 	for _, opt := range opts {
@@ -35,17 +60,17 @@ func NewRedisCache(pool *redis.Pool, opts ...CacheOptions) cache.Cache {
 	}
 	return c
 }
-func (c *RedisCache) Name() string {
+func (c *Cache) Name() string {
 	return cache.RedisCacheName
 }
 
 // Set puts cache into redis.
-func (c *RedisCache) Set(key string, value any, ttl time.Duration) error {
+func (c *Cache) Set(key string, value any, ttl time.Duration) error {
 	_, err := c.do("SETEX", key, int64(ttl/time.Second), value)
 	return err
 }
 
-func (c *RedisCache) Has(key string) (bool, error) {
+func (c *Cache) Has(key string) (bool, error) {
 	v, err := redis.Bool(c.do("EXISTS", key))
 	if err != nil {
 		return false, err
@@ -54,7 +79,7 @@ func (c *RedisCache) Has(key string) (bool, error) {
 }
 
 // GetMulti gets cache from redis.
-func (c *RedisCache) GetMulti(keys []string) ([]any, error) {
+func (c *Cache) GetMulti(keys []string) ([]any, error) {
 	conn := c.Redis.Get()
 	defer func() {
 		_ = conn.Close()
@@ -67,7 +92,7 @@ func (c *RedisCache) GetMulti(keys []string) ([]any, error) {
 }
 
 // Get cache from redis.
-func (c *RedisCache) Get(key string) (any, error) {
+func (c *Cache) Get(key string) (any, error) {
 	if v, err := c.do("GET", key); err == nil {
 		return v, nil
 	} else {
@@ -76,26 +101,26 @@ func (c *RedisCache) Get(key string) (any, error) {
 }
 
 // Delete deletes a key's cache in redis.
-func (c *RedisCache) Delete(key string) error {
+func (c *Cache) Delete(key string) error {
 	_, err := c.do("DEL", key)
 	return err
 }
 
 // Increment increases a key's counter in redis.
-func (c *RedisCache) Increment(key string, step int) error {
+func (c *Cache) Increment(key string, step int) error {
 	_, err := redis.Bool(c.do("INCRBY", key, step))
 	return err
 }
 
 // Decrement decreases a key's counter in redis.
-func (c *RedisCache) Decrement(key string, step int) error {
+func (c *Cache) Decrement(key string, step int) error {
 	_, err := redis.Bool(c.do("INCRBY", key, -step))
 	return err
 }
 
 // Clear deletes all cache in the redis collection
 // Be careful about this method, because it scans all keys and the delete them one by one
-func (c *RedisCache) Clear() error {
+func (c *Cache) Clear() error {
 	cachedKeys, err := c.Scan(c.Key + ":*")
 	if err != nil {
 		return err
@@ -113,7 +138,7 @@ func (c *RedisCache) Clear() error {
 }
 
 // Execute the redis commands. args[0] must be the key name
-func (c *RedisCache) do(commandName string, args ...any) (any, error) {
+func (c *Cache) do(commandName string, args ...any) (any, error) {
 	if len(args) == 0 {
 		return nil, errors.New("args is 0")
 	}
@@ -130,12 +155,12 @@ func (c *RedisCache) do(commandName string, args ...any) (any, error) {
 }
 
 // cacheKey with config key.
-func (c *RedisCache) cacheKey(originKey any) string {
+func (c *Cache) cacheKey(originKey any) string {
 	return fmt.Sprintf("%s:%s", c.Key, originKey)
 }
 
 // Scan scans all keys matching a given pattern.
-func (c *RedisCache) Scan(pattern string) (keys []string, err error) {
+func (c *Cache) Scan(pattern string) (keys []string, err error) {
 	conn := c.Redis.Get()
 	defer func() {
 		_ = conn.Close()
