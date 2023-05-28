@@ -1,10 +1,7 @@
 package cache
 
 import (
-	"bytes"
-	"encoding/gob"
 	"errors"
-	"fmt"
 	"math"
 )
 
@@ -13,35 +10,6 @@ var (
 	ErrDecrementOverflow = errors.New("this decr invocation will overflow")
 	ErrNotIntegerType    = errors.New("item val is not (u)int (u)int32 (u)int64")
 )
-
-// GobEncode Gob encodes a file cache item.
-func GobEncode(data any) ([]byte, error) {
-	buf := bytes.NewBuffer(nil)
-	enc := gob.NewEncoder(buf)
-	err := enc.Encode(data)
-	if err != nil {
-		return nil, errors.New("could not encode this data")
-	}
-	return buf.Bytes(), nil
-}
-
-// GobDecode Gob decodes a file cache item.
-func GobDecode(data []byte, to *CacheItem) error {
-	buf := bytes.NewBuffer(data)
-	dec := gob.NewDecoder(buf)
-	err := dec.Decode(&to)
-	if err != nil {
-		return errors.New("could not decode this data to FileCacheItem. Make sure that the data is encoded by GOB")
-	}
-	return nil
-}
-
-func UnwrapF(format string, a ...any) error {
-	return errors.Unwrap(fmt.Errorf(format, a...))
-}
-func WrapF(format string, a ...any) error {
-	return fmt.Errorf(format, a...)
-}
 
 // Decrement Self decrement
 func Decrement(originVal any, step int) (any, error) {

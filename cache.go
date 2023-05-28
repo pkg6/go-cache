@@ -1,9 +1,9 @@
 package cache
 
 import (
-	"bytes"
-	"encoding/gob"
+	"encoding/json"
 	"errors"
+	"fmt"
 	"time"
 )
 
@@ -47,27 +47,43 @@ type CacheItemCrypto interface {
 
 type CacheItem struct {
 	// data
-	Data any
+	Data any `json:"data"`
 	//expired ttl
-	TTL time.Duration
+	TTL time.Duration `json:"ttl"`
 	// now data
-	JoinTime time.Time
+	JoinTime time.Time `json:"join_time"`
 	// expired data
-	ExpirationTime time.Time
+	ExpirationTime time.Time `json:"expiration_time"`
+	//Is it indefinite
+	IsIndefinite bool `json:"is_indefinite"`
 }
 
-func (c CacheItem) Encode(v any) ([]byte, error) {
-	buf := bytes.NewBuffer(nil)
-	enc := gob.NewEncoder(buf)
-	err := enc.Encode(v)
-	if err != nil {
-		return nil, err
+func (c *CacheItem) CheckIndefinite() {
+	if c.TTL == time.Duration(0) || c.TTL == (86400*365*20)*time.Second {
+		c.IsIndefinite = true
 	}
-	return buf.Bytes(), nil
 }
 
-func (c CacheItem) Decode(data []byte, v *CacheItem) error {
-	buf := bytes.NewBuffer(data)
-	dec := gob.NewDecoder(buf)
-	return dec.Decode(&v)
+func GetCacheItem(crypto CacheItemCrypto, data any) (item CacheItem, err error) {
+	if bytes, ok := data.([]byte); ok {
+		err = crypto.Decode(bytes, &item)
+		if err != nil {
+			return item, err
+		}
+		if item.ExpirationTime.Before(time.Now()) && !item.IsIndefinite {
+			return item, ErrKeyExpired
+		}
+		return item, nil
+	}
+	return item, fmt.Errorf("data must be []byte")
+}
+
+type CacheItemEncryption struct{}
+
+func (c CacheItemEncryption) Encode(v any) ([]byte, error) {
+	return json.Marshal(v)
+}
+
+func (c CacheItemEncryption) Decode(data []byte, v *CacheItem) error {
+	return json.Unmarshal(data, v)
 }

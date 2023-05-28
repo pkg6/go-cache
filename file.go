@@ -40,7 +40,7 @@ func FileCacheWithDataCrypto(cacheItemCrypto CacheItemCrypto) FileCacheOptions {
 func NewFileCache(opts ...FileCacheOptions) Cache {
 	c := &FileCache{
 		Path:            FileCachePath,
-		CacheItemCrypto: &CacheItem{},
+		CacheItemCrypto: &CacheItemEncryption{},
 	}
 	for _, opt := range opts {
 		opt(c)
@@ -63,6 +63,8 @@ func (f *FileCache) Set(key string, val any, ttl time.Duration) error {
 	if ttl == time.Duration(0) {
 		item.TTL = (86400 * 365 * 20) * time.Second
 	}
+	item.CheckIndefinite()
+	fmt.Println(item)
 	item.ExpirationTime = item.JoinTime.Add(item.TTL)
 	data, err := f.CacheItemCrypto.Encode(item)
 	if err != nil {
@@ -186,14 +188,7 @@ func (f *FileCache) getCacheItem(key string) (item CacheItem, err error) {
 	if err != nil {
 		return item, err
 	}
-	err = f.CacheItemCrypto.Decode(fileData, &item)
-	if err != nil {
-		return item, err
-	}
-	if item.ExpirationTime.Before(time.Now()) {
-		return item, ErrKeyExpired
-	}
-	return item, nil
+	return GetCacheItem(f.CacheItemCrypto, fileData)
 }
 
 func ensureDirectory(path string) error {

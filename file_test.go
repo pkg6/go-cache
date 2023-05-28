@@ -1,7 +1,6 @@
 package cache
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -151,21 +150,4 @@ func TestFileGetContents(t *testing.T) {
 	data, err := os.ReadFile(fn)
 	assert.Nil(t, err)
 	assert.Equal(t, "text", string(data))
-}
-
-func TestGobEncodeDecode(t *testing.T) {
-	_, err := GobEncode(func() {
-		fmt.Print("test func")
-	})
-	assert.NotNil(t, err)
-	data, err := GobEncode(&CacheItem{
-		Data: "hello",
-	})
-	assert.Nil(t, err)
-	err = GobDecode([]byte("wrong data"), &CacheItem{})
-	assert.NotNil(t, err)
-	dci := &CacheItem{}
-	err = GobDecode(data, dci)
-	assert.Nil(t, err)
-	assert.Equal(t, "hello", dci.Data)
 }

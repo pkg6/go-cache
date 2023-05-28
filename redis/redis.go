@@ -3,6 +3,7 @@ package redis
 import (
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/gomodule/redigo/redis"
@@ -13,8 +14,9 @@ import (
 var DefaultKey = "gocache"
 
 type Cache struct {
-	Redis *redis.Pool // redis connection pool
-	Key   string
+	Redis           *redis.Pool // redis connection pool
+	Key             string
+	CacheItemCrypto cache.CacheItemCrypto
 }
 type CacheOptions func(c *Cache)
 
@@ -52,8 +54,9 @@ func defaultRedisPool() *redis.Pool {
 // NewRedisCache creates a new redis cache with default collection name.
 func NewRedisCache(opts ...CacheOptions) cache.Cache {
 	c := &Cache{
-		Redis: defaultRedisPool(),
-		Key:   DefaultKey,
+		Redis:           defaultRedisPool(),
+		Key:             DefaultKey,
+		CacheItemCrypto: &cache.CacheItemEncryption{},
 	}
 	for _, opt := range opts {
 		opt(c)
@@ -66,12 +69,27 @@ func (c *Cache) Name() string {
 
 // Set puts cache into redis.
 func (c *Cache) Set(key string, value any, ttl time.Duration) error {
-	_, err := c.do("SETEX", key, int64(ttl/time.Second), value)
+	item := cache.CacheItem{Data: value, JoinTime: time.Now(), TTL: ttl}
+	item.ExpirationTime = item.JoinTime.Add(item.TTL)
+	item.CheckIndefinite()
+	strByte, err := c.CacheItemCrypto.Encode(item)
+	if err != nil {
+		return err
+	}
+	commandName := "SETEX"
+	args := []any{c.cacheKey(key)}
+	if item.TTL == time.Duration(0) {
+		commandName = "SET"
+		args = append(args, string(strByte))
+	} else {
+		args = append(args, int64(ttl/time.Second), string(strByte))
+	}
+	_, err = c.do(commandName, args...)
 	return err
 }
 
 func (c *Cache) Has(key string) (bool, error) {
-	v, err := redis.Bool(c.do("EXISTS", key))
+	v, err := redis.Bool(c.do("EXISTS", c.cacheKey(key)))
 	if err != nil {
 		return false, err
 	}
@@ -88,13 +106,34 @@ func (c *Cache) GetMulti(keys []string) ([]any, error) {
 	for _, key := range keys {
 		args = append(args, c.cacheKey(key))
 	}
-	return redis.Values(conn.Do("MGET", args...))
+	values, err := redis.Values(conn.Do("MGET", args...))
+	if err != nil {
+		return nil, err
+	}
+	newValues := make([]any, len(values))
+	keysErr := make([]string, len(values))
+	for _, value := range values {
+		if item, err := cache.GetCacheItem(c.CacheItemCrypto, value); err != nil {
+			keysErr = append(keysErr, err.Error())
+			continue
+		} else {
+			newValues = append(newValues, item.Data)
+		}
+	}
+	if len(keysErr) == 0 {
+		return newValues, nil
+	}
+	return newValues, fmt.Errorf(strings.Join(keysErr, "; "))
 }
 
 // Get cache from redis.
 func (c *Cache) Get(key string) (any, error) {
-	if v, err := c.do("GET", key); err == nil {
-		return v, nil
+	if v, err := c.do("GET", c.cacheKey(key)); err == nil {
+		item, err := cache.GetCacheItem(c.CacheItemCrypto, v)
+		if err != nil {
+			return nil, err
+		}
+		return item.Data, nil
 	} else {
 		return nil, err
 	}
@@ -102,19 +141,19 @@ func (c *Cache) Get(key string) (any, error) {
 
 // Delete deletes a key's cache in redis.
 func (c *Cache) Delete(key string) error {
-	_, err := c.do("DEL", key)
+	_, err := c.do("DEL", c.cacheKey(key))
 	return err
 }
 
 // Increment increases a key's counter in redis.
 func (c *Cache) Increment(key string, step int) error {
-	_, err := redis.Bool(c.do("INCRBY", key, step))
+	_, err := redis.Bool(c.do("INCRBY", c.cacheKey(key), step))
 	return err
 }
 
 // Decrement decreases a key's counter in redis.
 func (c *Cache) Decrement(key string, step int) error {
-	_, err := redis.Bool(c.do("INCRBY", key, -step))
+	_, err := redis.Bool(c.do("INCRBY", c.cacheKey(key), -step))
 	return err
 }
 
@@ -149,7 +188,7 @@ func (c *Cache) do(commandName string, args ...any) (any, error) {
 	}()
 	reply, err := conn.Do(commandName, args...)
 	if err != nil {
-		return nil, cache.WrapF("could not execute this command: %s", commandName)
+		return nil, fmt.Errorf("could not execute this command: %s", commandName)
 	}
 	return reply, nil
 }
