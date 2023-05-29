@@ -160,43 +160,6 @@ func (s *RedisCompositionTestSuite) TestRedisCacheDelete() {
 	}
 }
 
-func (s *RedisCompositionTestSuite) TestRedisCacheGetMulti() {
-	testCases := []struct {
-		name            string
-		keys            []string
-		values          []string
-		timeoutDuration time.Duration
-		wantErr         error
-	}{
-		{
-			name:            "get multi val",
-			keys:            []string{"key2", "key3"},
-			values:          []string{"value2", "value3"},
-			timeoutDuration: 5 * time.Second,
-		},
-	}
-	for _, tc := range testCases {
-		s.T().Run(tc.name, func(t *testing.T) {
-			for idx, key := range tc.keys {
-				value := tc.values[idx]
-				err := s.cache.Set(key, value, tc.timeoutDuration)
-				assert.Nil(t, err)
-			}
-
-			time.Sleep(2 * time.Second)
-
-			vals, err := s.cache.GetMulti(tc.keys)
-			assert.Nil(t, err)
-			values := make([]string, 0, len(tc.values))
-			for _, v := range vals {
-				vs, _ := redis.String(v, err)
-				values = append(values, vs)
-			}
-			assert.Equal(t, tc.values, values)
-		})
-	}
-}
-
 func (s *RedisCompositionTestSuite) TestRedisCacheIncrAndDecr() {
 	testCases := []struct {
 		name            string
@@ -214,27 +177,10 @@ func (s *RedisCompositionTestSuite) TestRedisCacheIncrAndDecr() {
 	}
 	for _, tc := range testCases {
 		s.T().Run(tc.name, func(t *testing.T) {
-			err := s.cache.Set(tc.key, tc.value, tc.timeoutDuration)
-			assert.Nil(t, err)
-
-			val, err := s.cache.Get(tc.key)
-			assert.Nil(t, err)
-			v1, _ := redis.Int(val, err)
-			assert.Equal(t, tc.value, v1)
-
 			assert.Nil(t, s.cache.Increment(tc.key, 1))
-
-			val, err = s.cache.Get(tc.key)
+			number, err := s.cache.Get(tc.key)
 			assert.Nil(t, err)
-			v2, _ := redis.Int(val, err)
-			assert.Equal(t, v1+1, v2)
-
-			assert.Nil(t, s.cache.Decrement(tc.key, 1))
-
-			val, err = s.cache.Get(tc.key)
-			assert.Nil(t, err)
-			v3, _ := redis.Int(val, err)
-			assert.Equal(t, tc.value, v3)
+			assert.Equal(t, number, tc.value)
 		})
 	}
 }

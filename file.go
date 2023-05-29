@@ -21,8 +21,8 @@ var (
 )
 
 type FileCache struct {
-	Path            string
-	CacheItemCrypto CacheItemCrypto
+	Path      string
+	CacheItem ICacheItem
 }
 type FileCacheOptions func(c *FileCache)
 
@@ -31,16 +31,16 @@ func FileCacheWithCachePath(cachePath string) FileCacheOptions {
 		c.Path = cachePath
 	}
 }
-func FileCacheWithDataCrypto(cacheItemCrypto CacheItemCrypto) FileCacheOptions {
+func FileCacheWithCacheItem(cacheItem ICacheItem) FileCacheOptions {
 	return func(c *FileCache) {
-		c.CacheItemCrypto = cacheItemCrypto
+		c.CacheItem = cacheItem
 	}
 }
 
 func NewFileCache(opts ...FileCacheOptions) Cache {
 	c := &FileCache{
-		Path:            FileCachePath,
-		CacheItemCrypto: &CacheItemEncryption{},
+		Path:      FileCachePath,
+		CacheItem: &CacheItem{},
 	}
 	for _, opt := range opts {
 		opt(c)
@@ -55,18 +55,11 @@ func (f *FileCache) Get(key string) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	return item.Data, nil
+	return item.GetData(), nil
 }
 
 func (f *FileCache) Set(key string, val any, ttl time.Duration) error {
-	item := CacheItem{Data: val, JoinTime: time.Now(), TTL: ttl}
-	if ttl == time.Duration(0) {
-		item.TTL = (86400 * 365 * 20) * time.Second
-	}
-	item.CheckIndefinite()
-	fmt.Println(item)
-	item.ExpirationTime = item.JoinTime.Add(item.TTL)
-	data, err := f.CacheItemCrypto.Encode(item)
+	dataStr, err := f.CacheItem.SetCacheItem(val, ttl)
 	if err != nil {
 		return err
 	}
@@ -74,8 +67,7 @@ func (f *FileCache) Set(key string, val any, ttl time.Duration) error {
 	if err != nil {
 		return err
 	}
-	fmt.Println(filename)
-	return os.WriteFile(filename, data, os.ModePerm)
+	return os.WriteFile(filename, []byte(dataStr), os.ModePerm)
 }
 
 func (f *FileCache) Delete(key string) error {
@@ -132,11 +124,11 @@ func (f *FileCache) Increment(key string, step int) error {
 	if err != nil {
 		return f.Set(key, step, 0)
 	}
-	val, err := Increment(item.Data, step)
+	val, err := Increment(item.GetData(), step)
 	if err != nil {
 		return err
 	}
-	return f.Set(key, val, item.TTL)
+	return f.Set(key, val, item.GetTTL())
 }
 
 func (f *FileCache) Decrement(key string, step int) error {
@@ -144,11 +136,11 @@ func (f *FileCache) Decrement(key string, step int) error {
 	if err != nil {
 		return f.Set(key, step, 0)
 	}
-	val, err := Decrement(item.Data, step)
+	val, err := Decrement(item.GetData(), step)
 	if err != nil {
 		return err
 	}
-	return f.Set(key, val, item.TTL)
+	return f.Set(key, val, item.GetTTL())
 }
 
 func (f *FileCache) Has(key string) (bool, error) {
@@ -179,7 +171,7 @@ func (f *FileCache) getCacheKey(key string) (string, error) {
 	return filepath.Join(path, fmt.Sprintf("%s%s", keyHash, fileCacheSuffix)), nil
 }
 
-func (f *FileCache) getCacheItem(key string) (item CacheItem, err error) {
+func (f *FileCache) getCacheItem(key string) (item ICacheItem, err error) {
 	filename, err := f.getCacheKey(key)
 	if err != nil {
 		return item, err
@@ -188,7 +180,7 @@ func (f *FileCache) getCacheItem(key string) (item CacheItem, err error) {
 	if err != nil {
 		return item, err
 	}
-	return GetCacheItem(f.CacheItemCrypto, fileData)
+	return f.CacheItem.GetCacheItem(fileData)
 }
 
 func ensureDirectory(path string) error {
