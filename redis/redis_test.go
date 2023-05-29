@@ -30,7 +30,7 @@ func (s *Suite) SetupSuite() {
 		if err != nil {
 			return nil, fmt.Errorf("could not dial to remote %s server: %s ", s.driver, s.dsn)
 		}
-		_, selecterr := c.Do("SELECT", 0)
+		_, selecterr := c.Do("SELECT", 9)
 		if selecterr != nil {
 			_ = c.Close()
 			return nil, selecterr
@@ -62,7 +62,7 @@ func (s *Suite) SetupSuite() {
 		t.Fatal(err)
 	}
 
-	bm := NewRedisCache(CacheWithRedisPool(pool))
+	bm := NewRedisCache(CacheWithRedisPool(pool), CacheWithKey("test"))
 	if err != nil {
 		t.Fatal(err)
 	}
