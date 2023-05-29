@@ -8,7 +8,7 @@ import (
 var (
 	ErrIncrementOverflow = errors.New("this incr invocation will overflow")
 	ErrDecrementOverflow = errors.New("this decr invocation will overflow")
-	ErrNotIntegerType    = errors.New("item val is not (u)int (u)int32 (u)int64")
+	ErrNotIntegerType    = errors.New("item val is not (u)int (u)int32 (u)int64 float64 float32")
 )
 
 // Decrement Self decrement
@@ -45,6 +45,10 @@ func Decrement(originVal any, step int) (any, error) {
 			return nil, ErrDecrementOverflow
 		}
 		return val - uint64(step), nil
+	case float64:
+		return val - float64(step), nil
+	case float32:
+		return val - float32(step), nil
 	default:
 		return nil, ErrNotIntegerType
 	}
@@ -85,6 +89,10 @@ func Increment(originVal any, step int) (any, error) {
 			return nil, ErrIncrementOverflow
 		}
 		return val + uint64(step), nil
+	case float64:
+		return val + float64(step), nil
+	case float32:
+		return val + float32(step), nil
 	default:
 		return nil, ErrNotIntegerType
 	}
