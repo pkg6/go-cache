@@ -20,6 +20,12 @@ type Cache struct {
 }
 type CacheOptions func(c *Cache)
 
+func CacheWithCacheItem(cacheItem cache.ICacheItem) CacheOptions {
+	return func(c *Cache) {
+		c.CacheItem = cacheItem
+	}
+}
+
 // CacheWithKey configures key for redis
 func CacheWithKey(key string) CacheOptions {
 	return func(c *Cache) {
@@ -40,7 +46,7 @@ func defaultRedisPool() *redis.Pool {
 			if err != nil {
 				return nil, fmt.Errorf("could not dial to remote redis server: %s ", "127.0.0.1:6379")
 			}
-			if _, doErr := c.Do("SELECT", 0); doErr != nil {
+			if _, doErr := c.Do("SELECT", 8); doErr != nil {
 				_ = c.Close()
 				return nil, doErr
 			}
