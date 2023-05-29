@@ -57,8 +57,8 @@ func defaultRedisPool() *redis.Pool {
 	}
 }
 
-// NewRedisCache creates a new redis cache with default collection name.
-func NewRedisCache(opts ...CacheOptions) cache.Cache {
+// New creates a new redis cache with default collection name.
+func New(opts ...CacheOptions) cache.Cache {
 	c := &Cache{
 		Redis:     defaultRedisPool(),
 		Key:       DefaultKey,

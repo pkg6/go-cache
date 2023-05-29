@@ -21,8 +21,8 @@ func CacheWithMemcacheClient(memcache *memcache.Client) CacheOptions {
 	}
 }
 
-// NewMemCache creates new memcache adapter.
-func NewMemCache(opts ...CacheOptions) cache.Cache {
+// New creates new memcache adapter.
+func New(opts ...CacheOptions) cache.Cache {
 	c := &Cache{
 		Memcache: memcache.New("127.0.0.1:11211"),
 	}
