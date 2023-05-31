@@ -36,5 +36,7 @@ type Cache interface {
 type CacheManager interface {
 	Extend(name string, cache Cache) CacheManager
 	Disk(name string) CacheManager
+	Pull(key string) (any, error)
+	Remember(key string, value any, ttl time.Duration) (any, error)
 	Cache
 }
