@@ -36,5 +36,9 @@ func main() {
 	c.Increment("cache_inc", 1)
 	c.Decrement("cache_dec", 1)
 	c.Clear()
+	c.Pull("cache")
+	c.Remember("cache", func() any {
+		return "test1"
+	}, 0)
 }
 ```

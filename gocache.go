@@ -2,6 +2,7 @@ package cache
 
 import (
 	"fmt"
+	"sync"
 	"time"
 )
 
@@ -9,6 +10,7 @@ type GoCache struct {
 	name  string
 	Maps  map[string]Cache
 	Names []string
+	l     sync.RWMutex
 }
 
 func New() CacheManager {
@@ -29,7 +31,7 @@ func (f *GoCache) Extend(name string, cache Cache) CacheManager {
 	f.Names = append(f.Names, name)
 	return f
 }
-func (f GoCache) Name() string {
+func (f *GoCache) Name() string {
 	return CacheName
 }
 
@@ -39,6 +41,38 @@ func (f *GoCache) Disk(name string) CacheManager {
 		Maps:  f.Maps,
 		Names: f.Names,
 	}
+}
+
+// Pull 读取缓存并删除
+func (f *GoCache) Pull(key string) (any, error) {
+	adapter := f.FindAdapter()
+	if val, err := adapter.Get(key); err != nil {
+		return val, err
+	} else {
+		_ = adapter.Delete(key)
+		return val, nil
+	}
+}
+
+func (f *GoCache) Remember(key string, value any, ttl time.Duration) (any, error) {
+	adapter := f.FindAdapter()
+	has, _ := adapter.Has(key)
+	if has {
+		if val, err := adapter.Get(key); err != nil {
+			return val, err
+		} else {
+			return val, nil
+		}
+	}
+	f.l.Lock()
+	defer f.l.Unlock()
+	if valFun, ok := value.(func() any); ok {
+		value = valFun()
+	}
+	if err := adapter.Set(key, value, ttl); err != nil {
+		return value, err
+	}
+	return value, nil
 }
 
 // FindAdapter Find Adapter
