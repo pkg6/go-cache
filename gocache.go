@@ -20,13 +20,17 @@ func New() CacheManager {
 func NewCache(caches ...Cache) CacheManager {
 	c := New()
 	for _, cache := range caches {
-		c.Extend(cache.Name(), cache)
+		c.Extend(cache)
 	}
 	return c
 }
 
 // Extend 扩展
-func (f *GoCache) Extend(name string, cache Cache) CacheManager {
+func (f *GoCache) Extend(cache Cache, names ...string) CacheManager {
+	name := cache.Name()
+	if len(names) > 0 {
+		name = names[0]
+	}
 	f.Maps[name] = cache
 	f.Names = append(f.Names, name)
 	return f
@@ -78,12 +82,12 @@ func (f *GoCache) Remember(key string, value any, ttl time.Duration) (any, error
 // FindAdapter Find Adapter
 func (f *GoCache) FindAdapter() Cache {
 	var name string
-	if f.name != "" {
-		name = f.name
-	} else if len(f.Names) > 0 {
-		name = f.Names[0]
+	if f.name == "" {
+		if len(f.Names) > 0 {
+			f.name = f.Names[0]
+		}
 	}
-	if adapter, ok := f.Maps[name]; ok {
+	if adapter, ok := f.Maps[f.name]; ok {
 		return adapter
 	}
 	panic(fmt.Sprintf("Unable to find %s cache", name))
