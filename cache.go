@@ -18,7 +18,6 @@ const (
 	MemoryCacheName   = "memory"
 	RedisCacheName    = "redis"
 	MemcacheCacheName = "memcache"
-	CacheName         = "go-cache"
 )
 
 type Cache interface {
@@ -31,12 +30,4 @@ type Cache interface {
 	Increment(key string, step int) error
 	Decrement(key string, step int) error
 	Clear() error
-}
-
-type CacheManager interface {
-	Extend(cache Cache, names ...string) CacheManager
-	Disk(name string) CacheManager
-	Pull(key string) (any, error)
-	Remember(key string, value any, ttl time.Duration) (any, error)
-	Cache
 }

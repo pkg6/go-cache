@@ -36,7 +36,7 @@ func (s *Suite) SetupSuite() {
 		t.Fatal(err)
 	}
 
-	bm := NewMemCache(CacheWithMemcacheClient(pool))
+	bm := New(CacheWithMemcacheClient(pool))
 
 	s.cache = bm
 

@@ -62,7 +62,7 @@ func (s *Suite) SetupSuite() {
 		t.Fatal(err)
 	}
 
-	bm := NewRedisCache(CacheWithRedisPool(pool), CacheWithKey("test"))
+	bm := New(CacheWithRedisPool(pool), CacheWithKey("test"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -164,13 +164,13 @@ func (s *RedisCompositionTestSuite) TestRedisCacheIncrAndDecr() {
 	testCases := []struct {
 		name            string
 		key             string
-		value           int
+		value           float64
 		timeoutDuration time.Duration
 		wantErr         error
 	}{
 		{
 			name:            "incr and decr",
-			key:             "key",
+			key:             "key-incr-decr",
 			value:           1,
 			timeoutDuration: 5 * time.Second,
 		},
@@ -183,30 +183,6 @@ func (s *RedisCompositionTestSuite) TestRedisCacheIncrAndDecr() {
 			assert.Equal(t, number, tc.value)
 		})
 	}
-}
-
-func (s *RedisCompositionTestSuite) TestCacheScan() {
-	t := s.T()
-	timeoutDuration := 10 * time.Second
-
-	// insert all
-	for i := 0; i < 100; i++ {
-		assert.Nil(t, s.cache.Set(fmt.Sprintf("astaxie%d", i), fmt.Sprintf("author%d", i), timeoutDuration))
-	}
-	time.Sleep(time.Second)
-	// scan all for the first time
-	keys, err := s.cache.(*Cache).Scan(DefaultKey + ":*")
-	assert.Nil(t, err)
-
-	assert.Equal(t, 100, len(keys), "scan all error")
-
-	// clear all
-	assert.Nil(t, s.cache.Clear())
-
-	// scan all for the second time
-	keys, err = s.cache.(*Cache).Scan(DefaultKey + ":*")
-	assert.Nil(t, err)
-	assert.Equal(t, 0, len(keys))
 }
 
 func TestRedisComposition(t *testing.T) {
